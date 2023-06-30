@@ -1,6 +1,6 @@
 import json
 import requests
-import pandas as pd
+from pandas import DataFrame
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 class BuscarMarcas:
@@ -40,8 +40,7 @@ class BuscarMarcas:
         }
 
         with requests.session() as s:
-            if self.use_proxy and self.proxies:
-                s.proxies = self.proxies
+            s.proxies = self.proxies if self.use_proxy and self.proxies else None
 
             data = json.loads(s.post(self.url1, json=payload).json()['d'])
 
@@ -57,7 +56,7 @@ class BuscarMarcas:
                     "numeroSolicitud": m['id']
                 }
                 data = json.loads(s.post(self.url2, json=payload).json()['d'])
-                df = pd.DataFrame(data['Marca']['Instancias'])
+                df = DataFrame(data['Marca']['Instancias'])
 
                 if any('Resolución de observaciones de fondo de marca' in desc for desc in df['EstadoDescripcion']):
                     observada_de_fondo = True
