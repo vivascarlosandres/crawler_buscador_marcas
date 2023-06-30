@@ -32,6 +32,8 @@ payload = {
 with requests.session() as s:
     data = json.loads(s.post(url1, json=payload).json()['d'])
 
+    data_list = [] ## Lista vacía para almacenar los datos
+
     for m in data['Marcas']:
         payload = {
             "Hash": data['Hash'],
@@ -40,4 +42,7 @@ with requests.session() as s:
         }
         data = json.loads(s.post(url2, json=payload).json()['d'])
         df = pd.DataFrame(data['Marca']['Instancias'])
-        print(df)
+        data_list.append(df.to_dict()) ## Agregar los datos a la lista
+
+    with open('datos.json', 'w') as file:
+        json.dump(data_list, file) ## Guardar la lista en el archivo 'datos.json'
