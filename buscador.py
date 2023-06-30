@@ -1,16 +1,26 @@
 import json
 import requests
 import pandas as pd
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
+# Configuración
+numeros_registro = ['1236216', '1236222', '1236223', '1236224', '1236226', '1236227', '1236275', '1236319', '1236450', '1236470', '1236472', '1236471', '1236482']
+use_proxy = False  # Configurar como True si se desea utilizar proxies
+num_threads = 5  # Número de hilos de ejecución concurrentes
+output_file = "resultados.json"  # Nombre y ubicación del archivo JSON de salida
+
+# URL y proxies (si se utilizan)
 url1 = 'https://ion.inapi.cl/Marca/BuscarMarca.aspx/FindMarcas'
 url2 = 'https://ion.inapi.cl/Marca/BuscarMarca.aspx/FindMarcaByNumeroSolicitud'
+proxies = {
+    'http': 'http://your-proxy-url',
+    'https': 'https://your-proxy-url'
+}  # Configurar los proxies correspondientes si se utilizan
 
-## Lista de registros
-numeros_registro = ['1236216', '1236222', '1236223', '1236224', '1236226', '1236227', '1236275', '1236319', '1236450', '1236470', '1236472', '1236471', '1236482']
+# Función para procesar un número de registro
+def process_numero_registro(numero):
+    resultado = {}
 
-resultados_totales = [] ## Lista que contendrá 1 diccionario por cada registro
-
-for numero in numeros_registro:
     payload = {
         "Hash": "",
         "IDW": "",
@@ -36,6 +46,9 @@ for numero in numeros_registro:
     }
 
     with requests.session() as s:
+        if use_proxy:
+            s.proxies = proxies
+
         data = json.loads(s.post(url1, json=payload).json()['d'])
 
         observada_de_fondo = False
@@ -60,19 +73,24 @@ for numero in numeros_registro:
             if any('IPT' in desc or 'IPTV' in desc for desc in df['EstadoDescripcion']):
                 ipt = True
 
-        # Crear un diccionario con los resultados
-        resultados = {
-            "Numero de Registro": numero,
-            "Observada de Fondo": observada_de_fondo,
-            "Fecha Observada de Fondo": fecha_observada_fondo,
-            "Apelaciones": apelaciones,
-            "IPT": ipt
-        }
+        resultado["Numero de Registro"] = numero
+        resultado["Observada de Fondo"] = observada_de_fondo
+        resultado["Fecha Observada de Fondo"] = fecha_observada_fondo
+        resultado["Apelaciones"] = apelaciones
+        resultado["IPT"] = ipt
 
-        resultados_totales.append(resultados)
+    return resultado
+
+# Procesamiento en paralelo
+resultados_totales = []
+with ThreadPoolExecutor(max_workers=num_threads) as executor:
+    futures = [executor.submit(process_numero_registro, numero) for numero in numeros_registro]
+    for future in as_completed(futures):
+        resultado = future.result()
+        resultados_totales.append(resultado)
 
 # Guardar los resultados en un archivo JSON
-with open("resultados.json", "w") as file:
+with open(output_file, "w") as file:
     json.dump(resultados_totales, file)
 
-print("Los resultados se han guardado en 'resultados.json'.")
+print("Los resultados se han guardado en '{}'.".format(output_file))
