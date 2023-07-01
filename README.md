@@ -1,4 +1,6 @@
-![Logo](https://imgur.com/YL4RHxX.png)
+<p align="center">
+  <img src="https://imgur.com/YL4RHxX.png">
+</p>
 
 # Web Crawler Buscador de Marcas
 
