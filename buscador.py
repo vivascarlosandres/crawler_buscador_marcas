@@ -86,7 +86,7 @@ class BuscarMarcas:
         return resultado
 
     def crawl_registros(self, numeros_registro):
-        print("Iniciando obtención de datos...")
+        print("Iniciando obtención de datos de {} registros...".format(len(numeros_registro)))
         resultados_totales = []
         with ThreadPoolExecutor(max_workers=self.num_threads) as executor:
             futures = [executor.submit(self.process_numero_registro, numero) for numero in numeros_registro]
