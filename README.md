@@ -57,3 +57,77 @@ Una vez que las bibliotecas estén instaladas y las variables configuradas, se p
   python buscador.py
 ```
 Se obtendrá el archivo en formato JSON con los resultados de la búsqueda.
+
+## Explicación del proceso de desarrollo del código
+
+1. Importación de módulos:
+```bash
+import json
+import requests
+import pandas as pd
+from concurrent.futures import ThreadPoolExecutor, as_completed
+```
+En esta sección, se importan los módulos necesarios para el funcionamiento del programa. El módulo **'json'** se utiliza para trabajar con datos en formato JSON, **'requests'** se utiliza para realizar solicitudes HTTP, **'pandas'** se utiliza para manipular y analizar datos en forma de DataFrame, y **'ThreadPoolExecutor'** y **'as_completed'** se utilizan para realizar tareas en paralelo.
+
+2. Definición de la clase 'BuscarMarcas':
+```bash
+class BuscarMarcas:
+    def __init__(self, url1, url2, use_proxy=False, proxies=None, num_threads=5, output_file="resultados.json"):
+        self.url1 = url1
+        self.url2 = url2
+        self.use_proxy = use_proxy
+        self.proxies = proxies
+        self.num_threads = num_threads
+        self.output_file = output_file
+```
+En esta sección, se define la clase BuscarMarcas, que encapsula la funcionalidad para buscar marcas en un sitio web. La clase tiene un método constructor **'__init__()**' que inicializa los atributos de la clase, como las URL de búsqueda, el uso de proxy, los proxies, el número de hilos de ejecución y el archivo de salida JSON.
+
+3. Definición del método 'process_numero_registro()':
+```bash
+def process_numero_registro(self, numero):
+    resultado = {}
+
+    payload = {
+        "Hash": "",
+        "IDW": "",
+        "LastNumSol": 0,
+        "param1": "",
+        "param10": "",
+        "param11": "",
+        "param12": "",
+        "param13": "",
+        "param14": "",
+        "param15": "",
+        "param16": "",
+        "param17": "1",
+        "param2": numero,
+        "param3": "",
+        "param4": "",
+        "param5": "",
+        "param6": "",
+        "param7": "",
+        "param8": "",
+        "param9": "",
+        "responseCaptcha": "este texto no se validará"
+    }
+```
+Este método se encarga de procesar un número de registro específico. Recibe un número de registro como entrada y crea un diccionario vacío llamado **'resultado'** para almacenar los datos resultantes de la búsqueda. También se define un diccionario llamado **'payload'** que contiene los parámetros necesarios para realizar la solicitud HTTP.
+
+4. Inicio de la sesión de requests:
+```bash
+with requests.session() as s:
+```
+Se utiliza un bloque **'with'** para crear y gestionar una sesión de requests. Esto garantiza que los recursos de red se limpien adecuadamente después de su uso.
+
+5. Configuración de proxies (si se utilizan):
+```bash
+if self.use_proxy and self.proxies:
+    s.proxies = self.proxies
+```
+Esta sección verifica si se debe utilizar un proxy y si se han proporcionado proxies personalizados. Si es así, se configura el objeto de sesión **'s'** con los proxies proporcionados.
+
+6. Realización de la solicitud de POST para buscar marcas:
+```bash
+data = json.loads(s.post(self.url1, json=payload).json()['d'])
+```
+Aquí se realiza una solicitud POST utilizando la sesión de requests. Se envía la URL de búsqueda **'self.url1'** y los datos **'payload'** en formato JSON. La respuesta se convierte en un diccionario Python utilizando **'json.loads()'**.
