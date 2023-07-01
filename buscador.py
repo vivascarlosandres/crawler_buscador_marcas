@@ -1,6 +1,6 @@
 import json
 import requests
-from pandas import DataFrame
+import pandas as pd
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 class BuscarMarcas:
@@ -40,37 +40,48 @@ class BuscarMarcas:
         }
 
         with requests.session() as s:
-            s.proxies = self.proxies if self.use_proxy and self.proxies else None
+            try:
+                if self.use_proxy and self.proxies:
+                    s.proxies = self.proxies
 
-            data = json.loads(s.post(self.url1, json=payload).json()['d'])
+                data = json.loads(s.post(self.url1, json=payload).json()['d'])
 
-            observada_de_fondo = False
-            fecha_observada_fondo = None
-            apelaciones = False
-            ipt = False
+                observada_de_fondo = False
+                fecha_observada_fondo = None
+                apelaciones = False
+                ipt = False
 
-            for m in data['Marcas']:
-                payload = {
-                    "Hash": data['Hash'],
-                    "IDW": "",
-                    "numeroSolicitud": m['id']
-                }
-                data = json.loads(s.post(self.url2, json=payload).json()['d'])
-                df = DataFrame(data['Marca']['Instancias'])
+                for m in data['Marcas']:
+                    payload = {
+                        "Hash": data['Hash'],
+                        "IDW": "",
+                        "numeroSolicitud": m['id']
+                    }
+                    data = json.loads(s.post(self.url2, json=payload).json()['d'])
+                    df = pd.DataFrame(data['Marca']['Instancias'])
 
-                if any('Resolución de observaciones de fondo de marca' in desc for desc in df['EstadoDescripcion']):
-                    observada_de_fondo = True
-                    fecha_observada_fondo = df.loc[df['EstadoDescripcion'].str.contains('Resolución de observaciones de fondo de marca'), 'Fecha'].values[0]
-                if any('Recurso de apelación' in desc for desc in df['EstadoDescripcion']):
-                    apelaciones = True
-                if any('IPT' in desc or 'IPTV' in desc for desc in df['EstadoDescripcion']):
-                    ipt = True
+                    if any('Resolución de observaciones de fondo de marca' in desc for desc in df['EstadoDescripcion']):
+                        observada_de_fondo = True
+                        fecha_observada_fondo = df.loc[df['EstadoDescripcion'].str.contains('Resolución de observaciones de fondo de marca'), 'Fecha'].values[0]
+                    if any('Recurso de apelación' in desc for desc in df['EstadoDescripcion']):
+                        apelaciones = True
+                    if any('IPT' in desc or 'IPTV' in desc for desc in df['EstadoDescripcion']):
+                        ipt = True
 
-            resultado["Numero de Registro"] = numero
-            resultado["Observada de Fondo"] = observada_de_fondo
-            resultado["Fecha Observada de Fondo"] = fecha_observada_fondo
-            resultado["Apelaciones"] = apelaciones
-            resultado["IPT"] = ipt
+                resultado["Numero de Registro"] = numero
+                resultado["Observada de Fondo"] = observada_de_fondo
+                resultado["Fecha Observada de Fondo"] = fecha_observada_fondo
+                resultado["Apelaciones"] = apelaciones
+                resultado["IPT"] = ipt
+
+            except (requests.RequestException, json.JSONDecodeError) as e:
+                # Manejo de errores de solicitud HTTP o decodificación JSON
+                print(f"Error al procesar el número de registro {numero}: {str(e)}")
+                return None
+            except (KeyError, IndexError) as e:
+                # Manejo de errores de acceso a datos en el DataFrame
+                print(f"Error al acceder a los datos para el número de registro {numero}: {str(e)}")
+                return None
 
         return resultado
 
@@ -81,7 +92,8 @@ class BuscarMarcas:
             futures = [executor.submit(self.process_numero_registro, numero) for numero in numeros_registro]
             for future in as_completed(futures):
                 resultado = future.result()
-                resultados_totales.append(resultado)
+                if resultado is not None:
+                    resultados_totales.append(resultado)
 
         with open(self.output_file, "w") as file:
             json.dump(resultados_totales, file)
