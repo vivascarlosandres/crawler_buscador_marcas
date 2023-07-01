@@ -9,6 +9,7 @@
 3) <a href="https://github.com/vivascarlosandres/crawler_buscador_marcas/tree/main#instalación">Instalación</a>
 4) <a href="https://github.com/vivascarlosandres/crawler_buscador_marcas/tree/main#configuración-de-variables">Configuración de variables</a>
 5) <a href="https://github.com/vivascarlosandres/crawler_buscador_marcas/tree/main#ejecución-del-código">Ejecución del código</a>
+6) <a href="https://github.com/vivascarlosandres/crawler_buscador_marcas/tree/main#explicación-del-proceso-de-desarrollo-del-código">Explicación del proceso de desarrollo del código</a>
 
 ## Objetivo
 
@@ -131,3 +132,97 @@ Esta sección verifica si se debe utilizar un proxy y si se han proporcionado pr
 data = json.loads(s.post(self.url1, json=payload).json()['d'])
 ```
 Aquí se realiza una solicitud POST utilizando la sesión de requests. Se envía la URL de búsqueda **'self.url1'** y los datos **'payload'** en formato JSON. La respuesta se convierte en un diccionario Python utilizando **'json.loads()'**.
+
+7. Procesamiento de los datos de las marcas encontradas:
+```bash
+for m in data['Marcas']:
+    payload = {
+        "Hash": data['Hash'],
+        "IDW": "",
+        "numeroSolicitud": m['id']
+    }
+    data = json.loads(s.post(self.url2, json=payload).json()['d'])
+    df = pd.DataFrame(data['Marca']['Instancias'])
+
+    if any('Resolución de observaciones de fondo de marca' in desc for desc in df['EstadoDescripcion']):
+        observada_de_fondo = True
+        fecha_observada_fondo = df.loc[df['EstadoDescripcion'].str.contains('Resolución de observaciones de fondo de marca'), 'Fecha'].values[0]
+    if any('Recurso de apelación' in desc for desc in df['EstadoDescripcion']):
+        apelaciones = True
+    if any('IPT' in desc or 'IPTV' in desc for desc in df['EstadoDescripcion']):
+        ipt = True
+```
+En esta sección se itera sobre las marcas encontradas en los datos recibidos de la primera solicitud. Para cada marca, se realiza una segunda solicitud POST utilizando la URL **'self.url2'** y se obtienen los datos adicionales. Luego, se crea un DataFrame de pandas (**'df'**) utilizando los datos de las instancias de la marca. Se verifican diferentes condiciones en los datos para establecer los valores de las variables **'observada_de_fondo', 'fecha_observada_fondo', 'apelaciones' e 'ipt'**.
+
+8. Almacenamiento de los resultados en el diccionario 'resultado':
+```bash
+resultado["Numero de Registro"] = numero
+resultado["Observada de Fondo"] = observada_de_fondo
+resultado["Fecha Observada de Fondo"] = fecha_observada_fondo
+resultado["Apelaciones"] = apelaciones
+resultado["IPT"] = ipt
+```
+Los resultados de la búsqueda se almacenan en el diccionario **'resultado'** utilizando claves específicas.
+
+9. Manejo de errores y excepciones:
+```bash
+except (requests.RequestException, json.JSONDecodeError) as e:
+    # Manejo de errores de solicitud HTTP o decodificación JSON
+    print(f"Error al procesar el número de registro {numero}: {str(e)}")
+    return None
+except (KeyError, IndexError) as e:
+    # Manejo de errores de acceso a datos en el DataFrame
+    print(f"Error al acceder a los datos para el número de registro {numero}: {str(e)}")
+    return None
+```
+Se utilizan bloques **'try-except'** para manejar posibles errores y excepciones que puedan ocurrir durante la ejecución del código. Si se produce un error, se imprime un mensaje de error específico y se devuelve **'None'** para indicar un resultado no válido.
+
+10. Retorno del diccionario 'resultado':
+```bash
+return resultado
+```
+El método **'process_numero_registro()'** devuelve el diccionario **'resultado'** que contiene los resultados de la búsqueda para un número de registro específico.
+
+11. Definición del método 'crawl_registros()':
+```bash
+def crawl_registros(self, numeros_registro):
+    print("Iniciando obtención de datos...")
+    resultados_totales = []
+    with ThreadPoolExecutor(max_workers=self.num_threads) as executor:
+        futures = [executor.submit(self.process_numero_registro, numero) for numero in numeros_registro]
+        for future in as_completed(futures):
+            resultado = future.result()
+            if resultado is not None:
+                resultados_totales.append(resultado)
+
+    with open(self.output_file, "w") as file:
+        json.dump(resultados_totales, file)
+
+    print("Los resultados se han guardado en '{}'.".format(self.output_file))
+```
+Este método se encarga de realizar la búsqueda de marcas para una lista de números de registro. Utiliza la programación en paralelo para mejorar la eficiencia del proceso. Se crea una instancia de **'ThreadPoolExecutor'** con un número máximo de hilos de ejecución (**'self.num_threads'**). Luego, se ejecuta el método **'process_numero_registro()'** para cada número de registro en la lista utilizando **'executor.submit()'**. Los resultados válidos se agregan a la lista **'resultados_totales'**. Finalmente, los resultados se guardan en un archivo JSON especificado por **'self.output_file'**.
+
+12. Configuración y ejecución del crawler:
+```bash
+url1 = 'https://ion.inapi.cl/Marca/BuscarMarca.aspx/FindMarcas'
+url2 = 'https://ion.inapi.cl/Marca/BuscarMarca.aspx/FindMarcaByNumeroSolicitud'
+numeros_registro = ['1236216', '1236222', '1236223', '1236224', '1236226', '1236227', '1236275', '1236319', '1236450', '1236470', '1236472', '1236471', '1236482']
+output_file = "resultados.json"  # Nombre y ubicación del archivo JSON de salida
+
+# Proxies (si se utilizan)
+use_proxy = False  # Configurar como True si se desea utilizar proxies
+proxies = {
+    'http': 'http://your-proxy-url',
+    'https': 'https://your-proxy-url'
+}  # Configurar los proxies correspondientes si se utilizan
+
+# Paralelismo
+num_threads = 10  # Número de hilos de ejecución concurrentes
+
+# Crear una instancia del crawler
+crawler = BuscarMarcas(url1, url2, use_proxy, proxies, num_threads, output_file)
+
+# Ejecutar el crawler
+crawler.crawl_registros(numeros_registro)
+```
+En esta sección se configuran las variables necesarias, como las URL de búsqueda, la lista de números de registro, el archivo de salida y la configuración de proxies y paralelismo. Luego se crea una instancia de la clase **'BuscarMarcas'** con los parámetros correspondientes y se ejecuta el método **'crawl_registros()'** para iniciar la búsqueda y guardar los resultados.
