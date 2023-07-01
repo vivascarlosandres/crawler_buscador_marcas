@@ -4,6 +4,12 @@
 
 ## Índice
 
+1) <a href="https://github.com/vivascarlosandres/crawler_buscador_marcas/tree/main#objetivo">Objetivo</a>
+2) <a href="https://github.com/vivascarlosandres/crawler_buscador_marcas/tree/main#requerimientos-funcionales">Requerimientos funcionales</a>
+3) <a href="https://github.com/vivascarlosandres/crawler_buscador_marcas/tree/main#instalación">Instalación</a>
+4) <a href="https://github.com/vivascarlosandres/crawler_buscador_marcas/tree/main#configuración-de-variables">Configuración de variables</a>
+5) <a href="https://github.com/vivascarlosandres/crawler_buscador_marcas/tree/main#ejecución-del-código">Ejecución del código</a>
+
 ## Objetivo
 
 Desarrollar un web crawler para un sitio que funciona como buscador de marcas: https://ion.inapi.cl/Marca/BuscarMarca.aspx
@@ -31,8 +37,7 @@ Pre-requisitos:
 - Pip (packet manager para Python): https://pip.pypa.io/en/stable/installation/
 - Requests: pip install requests
 - Pandas: pip install pandas
-
-## Clonar el proyecto
+- Clonar el proyecto:
 ```bash
   git clone https://github.com/vivascarlosandres/crawler_buscador_marcas.git
 ```
@@ -51,3 +56,4 @@ Una vez que las bibliotecas estén instaladas y las variables configuradas, se p
 ```bash
   python buscador.py
 ```
+Se obtendrá el archivo en formato JSON con los resultados de la búsqueda.
